@@ -1,9 +1,11 @@
+import 'dart:async';
+
+import 'package:crypto_coins_list/features/crypto_list/blok/crypto_list_blok.dart';
 import 'package:crypto_coins_list/features/crypto_list/widgets/widgets.dart';
 import 'package:crypto_coins_list/repositories/crypto_coins/crypto_coins.dart';
 
-
-
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
 class CryptoListScreen extends StatefulWidget {
@@ -16,11 +18,10 @@ class CryptoListScreen extends StatefulWidget {
 }
 
 class _CryptoListScreenState extends State<CryptoListScreen> {
-  List<CryptoCoin>? _cryptoCoinsList;
-
+  final cryptoListBlok = CryptoListBloc(GetIt.I<AbstractCoinsRepository>());
   @override
   void initState() {
-    _loadCryptoCoins();
+    cryptoListBlok.add(LoadCryptoList(completer: null));
     super.initState();
   }
 
@@ -31,27 +32,63 @@ class _CryptoListScreenState extends State<CryptoListScreen> {
         title: const Text('CryptoCurrenciesList'),
         centerTitle: true,
       ),
-      body: (_cryptoCoinsList == null)
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.only(top: 15),
-              child: ListView.separated(
-                itemCount: _cryptoCoinsList!.length,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final completer = Completer();
+          cryptoListBlok.add(LoadCryptoList(completer: completer));
+          return completer.future;
+        },
+        child: BlocBuilder<CryptoListBloc, CryptoListState>(
+          bloc: cryptoListBlok,
+          builder: (context, state) {
+            if (state is CryptoListLoaded) {
+              return ListView.separated(
+                padding: const EdgeInsets.only(top: 16),
+                itemCount: state.coinsList.length,
                 separatorBuilder: (context, index) => const Divider(),
                 itemBuilder: (context, i) {
-                  final coin = _cryptoCoinsList![i];
+                  final coin = state.coinsList[i];
 
                   return CryptoCoinTile(
                     coin: coin,
                   );
                 },
-              ),
-            ),
+              );
+            }
+            if (state is CryptoListLoadingFailure) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Бир жерден ката кетти',
+                      style: TextStyle(fontSize: 25),
+                    ),
+                    const Text(
+                      'Сураныч, кийинчерээк кайра аракет кылыңыз',
+                      style: TextStyle(fontSize: 10),
+                    ),
+                    const SizedBox(height: 30),
+                    TextButton(
+                        onPressed: () {
+                          cryptoListBlok.add(LoadCryptoList(completer: null));
+                        },
+                        child: const Text(
+                          'Кайра аракет кылыныз',
+                          style: TextStyle(color: Colors.amber),
+                        ))
+                  ],
+                ),
+              );
+            }
+            return const Center(child: CircularProgressIndicator());
+          },
+        ),
+      ),
+      // (_cryptoCoinsList == null)
+      //     ? const Center(child: CircularProgressIndicator())
+      //     :
     );
-  }
-
-  Future<void> _loadCryptoCoins() async {
-    _cryptoCoinsList = await GetIt.I<AbstractCoinsRepository>().getCoinsList();
-    setState(() {});
   }
 }

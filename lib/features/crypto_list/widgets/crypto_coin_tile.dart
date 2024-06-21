@@ -17,7 +17,8 @@ class CryptoCoinTile extends StatelessWidget {
         coin.imageUrl,
       ),
       title: Text(coin.name, style: theme.textTheme.bodyMedium),
-      subtitle: Text('${coin.priceInUSD}', style: theme.textTheme.labelSmall),
+      subtitle:
+          Text('${coin.priceInUSD} \$', style: theme.textTheme.labelSmall),
       trailing: const Icon(
         Icons.arrow_forward_ios,
       ),
